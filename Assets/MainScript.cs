@@ -4,18 +4,21 @@ using UnityEngine.InputSystem;
 using GLTFast;
 using GLTFast.Logging;
 using System.Threading;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.ProgressBar;
-using GLTFast.Schema;
 using TMPro;
 using System;
-
-// 바디는 회전도 시켜주는게 좋지않을까?
-// selected parts로만 커스텀모드 진입하도록해야함.
+using UnityEngine.Networking;
+using System.IO;
+using System.Threading.Tasks;
+using UnityEditor.VersionControl;
+using Unity.VisualScripting;
+using UnityEngine.UI;
+using UnityEngine.UIElements;
+using Button = UnityEngine.UI.Button;
 
 public class AnimationControllerScript : MonoBehaviour
 {
     private Keyboard keyboard;
-    private bool CustomMode = false; //현재 커스텀 모드가 켜져있는지 확인하는 상태
+    private bool CustomMode = true; //현재 커스텀 모드가 켜져있는지 확인하는 상태
 
 
     public Transform parentTransform;
@@ -29,7 +32,7 @@ public class AnimationControllerScript : MonoBehaviour
 
     public Canvas CustomModeUI;
     private GameObject SelectedParts;
-
+    private bool selectPartBtn;
 
     public Vector3 rotationSpeed = new Vector3(0, 10f, 0);
 
@@ -37,7 +40,14 @@ public class AnimationControllerScript : MonoBehaviour
     {
         keyboard = Keyboard.current;
         RefreshCustomMode();
-
+        CustomModeUI.transform.Find("ImportBody").GetComponent<Button>().onClick.AddListener(()=> OpenFileExplorer()); //파일 불러오기 예시
+        CustomModeUI.transform.Find("LeftTurn").GetComponent<Button>().onClick.AddListener(() => rotationSpeed = new Vector3(0, 10f, 0));
+        CustomModeUI.transform.Find("RightTurn").GetComponent<Button>().onClick.AddListener(() => rotationSpeed = new Vector3(0, -10f, 0));
+        CustomModeUI.transform.Find("SelectParts").GetComponent<Button>().onClick.AddListener(() => SelectPartVisible());
+        CustomModeUI.transform.Find("Body").GetComponent<Button>().onClick.AddListener(() => SelectPartVisible());
+        CustomModeUI.transform.Find("SelectParts").GetComponent<Button>().onClick.AddListener(() => SelectPartVisible());
+        CustomModeUI.transform.Find("SelectParts").GetComponent<Button>().onClick.AddListener(() => SelectPartVisible());
+        CustomModeUI.transform.Find("SelectParts").GetComponent<Button>().onClick.AddListener(() => SelectPartVisible());
     }
 
 
@@ -49,9 +59,11 @@ public class AnimationControllerScript : MonoBehaviour
         }
 
 
-        if (keyboard.enterKey.wasPressedThisFrame) //파일 불러오기 예시
+        if (keyboard.spaceKey.wasPressedThisFrame) //모션 변화 함수 예시
         {
-            OpenFileExplorer();
+            ChangingMotion(Legs, "Walk");
+            ChangingMotion(Arms, "Walk");
+            ChangingMotion(Body, "YES");
         }
 
         if (keyboard.cKey.wasPressedThisFrame) //커스텀 모드를 키고 끄는 예시
@@ -59,6 +71,8 @@ public class AnimationControllerScript : MonoBehaviour
             if (!CustomMode)
             {
                 CustomMode = true;
+                selectPartBtn = false;
+                CustomModeUI.transform.Find("PartsButton").gameObject.SetActive(false);
             }
             else
             {
@@ -84,21 +98,54 @@ public class AnimationControllerScript : MonoBehaviour
             }
         }
 
-        if (keyboard.spaceKey.wasPressedThisFrame) //모션 변화 함수 예시
-        {
-            ChangingMotion(Legs, "Walk");
-            ChangingMotion(Arms, "Walk");
-            ChangingMotion(Body, "YES");
-        }
-
         if (keyboard.qKey.wasPressedThisFrame) //파츠 변화 함수 예시
         {
-            ChangeParts(ref Arms, "ArmParts2", new Vector3(0, 0, 0), new Vector3(0, 180, 0), new Vector3(0.7f, 0.7f, 0.7f));
+            ChangeParts(ref Arms, "ArmParts2", new Vector3(0, 0, 0), new Vector3(0, 180, 0), new Vector3(0.5f, 0.5f, 0.5f));
+
+            ChangeParts(ref Legs, "LegParts2", new Vector3(0, -1, 0), new Vector3(0, -90, 0), new Vector3(0.3f, 0.3f, 0.3f));
+        }
+
+
+        if (keyboard.dKey.wasPressedThisFrame) //말하기 예시
+        {
+            ControlTalking(true);
+        }
+        if (keyboard.fKey.wasPressedThisFrame)
+        {
+            ControlTalking(false);
+        }
+
+        if (keyboard.sKey.wasPressedThisFrame)
+        {
+            Selecting(ref Mouth);
+            ChangeParts(ref SelectedParts, "Lips");
         }
     }
 
+    public void ControlTalking(bool talk)
+    {
+        Mouth.GetComponent<MouthAnimator>().ControlTalking(talk);
+    }
 
+    public void Selecting(ref GameObject Object)
+    {
+        SelectedParts = Object;
+    }
 
+    public void SelectPartVisible()
+    {
+        if (selectPartBtn)
+        {
+            selectPartBtn = false;
+            CustomModeUI.transform.Find("PartsButton").gameObject.SetActive(false);
+        }
+        else
+        {
+            selectPartBtn = true;
+            CustomModeUI.transform.Find("PartsButton").gameObject.SetActive(true);
+        }
+        
+    }
 
 
     public void ChangingMotion(GameObject Object, string type)
@@ -132,31 +179,39 @@ public class AnimationControllerScript : MonoBehaviour
     {
         if (CustomMode)
         {
-            string ObjectPath = "Parts/" + newObject;
-            string ControllerPath = "Controller/AC_" + newObject;
-            RuntimeAnimatorController controller = Resources.Load<RuntimeAnimatorController>(ControllerPath);
-            if (oldObject != null)
+            if (oldObject == Mouth)
             {
-                Destroy(oldObject);
-                Debug.Log("삭제완료");
+                Mouth.GetComponent<MouthAnimator>().ChangeMouth(newObject);
             }
-
-            GameObject _newObject = Resources.Load<GameObject>(ObjectPath);
-            if (_newObject != null)
+            else
             {
-                oldObject = Instantiate(_newObject, MainTransform);
-                oldObject.transform.localPosition = PrePosition;
-                oldObject.transform.localRotation = Quaternion.Euler(PreRotation);
-                oldObject.transform.localScale = PreScale;
-                oldObject.AddComponent<Animator>();
-                Animator animator = oldObject.GetComponent<Animator>();
-                if (animator != null)
+                string ObjectPath = "Parts/" + newObject;
+                string ControllerPath = "Controller/AC_" + newObject;
+                RuntimeAnimatorController controller = Resources.Load<RuntimeAnimatorController>(ControllerPath);
+                if (oldObject != null)
                 {
-                    animator.runtimeAnimatorController = controller;
-                    Debug.Log("컨트롤러 연결");
+                    Destroy(oldObject);
+                    Debug.Log("삭제완료");
                 }
-                Debug.Log("프리팹 생성");
+
+                GameObject _newObject = Resources.Load<GameObject>(ObjectPath);
+                if (_newObject != null)
+                {
+                    oldObject = Instantiate(_newObject, MainTransform);
+                    oldObject.transform.localPosition = PrePosition;
+                    oldObject.transform.localRotation = Quaternion.Euler(PreRotation);
+                    oldObject.transform.localScale = PreScale;
+                    oldObject.AddComponent<Animator>();
+                    Animator animator = oldObject.GetComponent<Animator>();
+                    if (animator != null)
+                    {
+                        animator.runtimeAnimatorController = controller;
+                        Debug.Log("컨트롤러 연결");
+                    }
+                    Debug.Log("프리팹 생성");
+                }
             }
+           
         }
     }
 
@@ -229,7 +284,7 @@ public class AnimationControllerScript : MonoBehaviour
 
     private void RefreshCustomMode()
     {
-        CustomModeUI.transform.Find("CustomModeTEXT").gameObject.SetActive(CustomMode);
+        CustomModeUI.gameObject.SetActive(CustomMode);
         if (SelectedParts != null)
         {
             CustomModeUI.transform.Find("CustomModeTEXT").transform.Find("SelectedPartsName").GetComponent<TMP_Text>().text = SelectedParts.name;
@@ -239,12 +294,6 @@ public class AnimationControllerScript : MonoBehaviour
             CustomModeUI.transform.Find("CustomModeTEXT").transform.Find("SelectedPartsName").GetComponent<TMP_Text>().text = "없음";
         }
     }
-
-
-
-
-
-
 
     public void OpenFileExplorer()
     {
@@ -303,4 +352,28 @@ public class AnimationControllerScript : MonoBehaviour
             Debug.LogError("GLB 파일 로드 실패!");
         }
     }
+
+    private async void DownloadAndLoadGLB(string url)
+    {
+        string localPath = Path.Combine(Application.persistentDataPath, "model.glb");
+
+        using (UnityWebRequest www = UnityWebRequest.Get(url))
+        {
+            www.downloadHandler = new DownloadHandlerFile(localPath);
+            var asyncOp = www.SendWebRequest();
+
+            while (!asyncOp.isDone)
+                await System.Threading.Tasks.Task.Yield();
+
+            if (www.result != UnityWebRequest.Result.Success)
+            {
+                Debug.LogError("GLB 다운로드 실패: " + www.error);
+                return;
+            }
+
+            Debug.Log("GLB 다운로드 성공: " + localPath);
+            LoadGLB(localPath);
+        }
+    }
+
 }
