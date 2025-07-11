@@ -8,11 +8,6 @@ using TMPro;
 using System;
 using UnityEngine.Networking;
 using System.IO;
-using System.Threading.Tasks;
-using UnityEditor.VersionControl;
-using Unity.VisualScripting;
-using UnityEngine.UI;
-using UnityEngine.UIElements;
 using Button = UnityEngine.UI.Button;
 
 public class AnimationControllerScript : MonoBehaviour
@@ -44,10 +39,13 @@ public class AnimationControllerScript : MonoBehaviour
         CustomModeUI.transform.Find("LeftTurn").GetComponent<Button>().onClick.AddListener(() => rotationSpeed = new Vector3(0, 10f, 0));
         CustomModeUI.transform.Find("RightTurn").GetComponent<Button>().onClick.AddListener(() => rotationSpeed = new Vector3(0, -10f, 0));
         CustomModeUI.transform.Find("SelectParts").GetComponent<Button>().onClick.AddListener(() => SelectPartVisible());
-        CustomModeUI.transform.Find("Body").GetComponent<Button>().onClick.AddListener(() => SelectPartVisible());
-        CustomModeUI.transform.Find("SelectParts").GetComponent<Button>().onClick.AddListener(() => SelectPartVisible());
-        CustomModeUI.transform.Find("SelectParts").GetComponent<Button>().onClick.AddListener(() => SelectPartVisible());
-        CustomModeUI.transform.Find("SelectParts").GetComponent<Button>().onClick.AddListener(() => SelectPartVisible());
+        CustomModeUI.transform.Find("PartsButton").transform.Find("EyeParts").GetComponent<Button>().onClick.AddListener(() => SelectedParts = Eyes);
+        CustomModeUI.transform.Find("PartsButton").transform.Find("MouthParts").GetComponent<Button>().onClick.AddListener(() => SelectedParts = Mouth);
+        CustomModeUI.transform.Find("PartsButton").transform.Find("ArmParts").GetComponent<Button>().onClick.AddListener(() => SelectedParts = Arms);
+        CustomModeUI.transform.Find("PartsButton").transform.Find("LegParts").GetComponent<Button>().onClick.AddListener(() => SelectedParts = Legs);
+        CustomModeUI.transform.Find("PartsButton").transform.Find("BodyParts").GetComponent<Button>().onClick.AddListener(() => SelectedParts = Body);
+        CustomModeUI.transform.Find("ColorChange").GetComponent<Button>().onClick.AddListener(() => CustomMaterial(ref SelectedParts, "Red"));
+        CustomModeUI.transform.Find("PartsChange").GetComponent<Button>().onClick.AddListener(() => CustomMaterial(ref SelectedParts, "Red"));
     }
 
 
@@ -57,7 +55,10 @@ public class AnimationControllerScript : MonoBehaviour
         {
             transform.Rotate(rotationSpeed * Time.deltaTime);
         }
-
+        if (keyboard.enterKey.wasPressedThisFrame)
+        {
+            RefreshCustomMode();
+        }
 
         if (keyboard.spaceKey.wasPressedThisFrame) //모션 변화 함수 예시
         {
@@ -101,7 +102,6 @@ public class AnimationControllerScript : MonoBehaviour
         if (keyboard.qKey.wasPressedThisFrame) //파츠 변화 함수 예시
         {
             ChangeParts(ref Arms, "ArmParts2", new Vector3(0, 0, 0), new Vector3(0, 180, 0), new Vector3(0.5f, 0.5f, 0.5f));
-
             ChangeParts(ref Legs, "LegParts2", new Vector3(0, -1, 0), new Vector3(0, -90, 0), new Vector3(0.3f, 0.3f, 0.3f));
         }
 
