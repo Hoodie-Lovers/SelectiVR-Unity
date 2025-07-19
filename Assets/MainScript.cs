@@ -14,6 +14,7 @@ public class AnimationControllerScript : MonoBehaviour
 {
     private Keyboard keyboard;
     private bool CustomMode = false; //현재 커스텀 모드가 켜져있는지 확인하는 상태
+    private bool ImportBody = false;
 
 
     public Transform parentTransform;
@@ -33,16 +34,20 @@ public class AnimationControllerScript : MonoBehaviour
     private GameObject SelectedParts;
     private bool selectPartBtn;
 
-    public Vector3 rotationSpeed = new Vector3(0, 10f, 0);
+    public Vector3 rotationSpeed = new Vector3(0, 20.0f, 0);
 
     void Start()
     {
         keyboard = Keyboard.current;
         RefreshCustomMode();
         CustomModeUI.transform.Find("CustomBtn").GetComponent<Button>().onClick.AddListener(() => CustomOnOff());
+        CustomModeUI.transform.Find("QuitBtn").GetComponent<Button>().onClick.AddListener(() => Application.Quit()); //종료 버튼 (실행파일에서만 가능)
         CustomModeUI.transform.Find("CustomUI").transform.Find("ImportBody").GetComponent<Button>().onClick.AddListener(() => OpenFileExplorer()); //파일 불러오기 예시
-        CustomModeUI.transform.Find("CustomUI").transform.Find("LeftTurn").GetComponent<Button>().onClick.AddListener(() => rotationSpeed = new Vector3(0, 10f, 0));
-        CustomModeUI.transform.Find("CustomUI").transform.Find("RightTurn").GetComponent<Button>().onClick.AddListener(() => rotationSpeed = new Vector3(0, -10f, 0));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("LeftTurn").GetComponent<Button>().onClick.AddListener(() => rotationSpeed = new Vector3(0, 20.0f, 0));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("RightTurn").GetComponent<Button>().onClick.AddListener(() => rotationSpeed = new Vector3(0, -20f, 0));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("Pause").GetComponent<Button>().onClick.AddListener(() => Play(false));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("Play").GetComponent<Button>().onClick.AddListener(() => Play(true));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("FrontSide").GetComponent<Button>().onClick.AddListener(() => transform.localRotation = Quaternion.identity);
         CustomModeUI.transform.Find("CustomUI").transform.Find("SelectParts").GetComponent<Button>().onClick.AddListener(() => SelectPartVisible());
         CustomModeUI.transform.Find("CustomUI").transform.Find("PartsButton").transform.Find("EyeParts").GetComponent<Button>().onClick.AddListener(() => Selecting(ref Eyes));
         CustomModeUI.transform.Find("CustomUI").transform.Find("PartsButton").transform.Find("MouthParts").GetComponent<Button>().onClick.AddListener(() => Selecting(ref Mouth));
@@ -51,6 +56,12 @@ public class AnimationControllerScript : MonoBehaviour
         CustomModeUI.transform.Find("CustomUI").transform.Find("PartsButton").transform.Find("BodyParts").GetComponent<Button>().onClick.AddListener(() => Selecting(ref Body));
         CustomModeUI.transform.Find("CustomUI").transform.Find("ColorChange").GetComponent<Button>().onClick.AddListener(() => CustomMaterial(ref SelectedParts));
         CustomModeUI.transform.Find("CustomUI").transform.Find("PartsChange").GetComponent<Button>().onClick.AddListener(() => PartChanging(ref SelectedParts));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").transform.Find("UpScale").GetComponent<Button>().onClick.AddListener(() => CustomParts(ref SelectedParts, 0, 0, 0, 0.5f));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").transform.Find("DownScale").GetComponent<Button>().onClick.AddListener(() => CustomParts(ref SelectedParts, 0, 0, 0, -0.5f));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").transform.Find("ToUp").GetComponent<Button>().onClick.AddListener(() => CustomParts(ref SelectedParts, 0, 0.5f, 0, 0));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").transform.Find("ToDown").GetComponent<Button>().onClick.AddListener(() => CustomParts(ref SelectedParts, 0, -0.5f, 0, 0));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").transform.Find("ToFront").GetComponent<Button>().onClick.AddListener(() => CustomParts(ref SelectedParts, 0, 0, -0.5f, 0));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").transform.Find("ToBack").GetComponent<Button>().onClick.AddListener(() => CustomParts(ref SelectedParts, 0, 0, 0.5f, 0));
     }
 
 
@@ -68,14 +79,6 @@ public class AnimationControllerScript : MonoBehaviour
             ChangingMotion(Body, "YES");
         }
 
-        if (keyboard.zKey.wasPressedThisFrame)//커스텀 함수 예시
-        {
-            if (CustomMode)
-            {
-                CustomParts(ref Legs, 0, 0, 0, -0.2f, -0.2f, -0.2f);
-            }
-        }
-
         if (keyboard.dKey.wasPressedThisFrame) //말하기 예시
         {
             ControlTalking(true);
@@ -83,6 +86,27 @@ public class AnimationControllerScript : MonoBehaviour
         if (keyboard.fKey.wasPressedThisFrame)
         {
             ControlTalking(false);
+        }
+    }
+    private void Play(bool play)
+    {
+        if (play)
+        {
+            CustomModeUI.transform.Find("CustomUI").transform.Find("LeftTurn").gameObject.SetActive(true);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("RightTurn").gameObject.SetActive(true);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("Pause").gameObject.SetActive(true);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("Play").gameObject.SetActive(false);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("FrontSide").gameObject.SetActive(false);
+            rotationSpeed = new Vector3(0, 20.0f, 0);
+        }
+        else
+        {
+            CustomModeUI.transform.Find("CustomUI").transform.Find("LeftTurn").gameObject.SetActive(false);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("RightTurn").gameObject.SetActive(false);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("Pause").gameObject.SetActive(false);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("Play").gameObject.SetActive(true);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("FrontSide").gameObject.SetActive(true);
+            rotationSpeed = new Vector3(0, 0, 0);
         }
     }
 
@@ -94,6 +118,8 @@ public class AnimationControllerScript : MonoBehaviour
     public void Selecting(ref GameObject Object)
     {
         SelectedParts = Object;
+        if (Object == Body) { ImportBody = true; }
+        else { ImportBody = false; }
         RefreshCustomMode();
     }
 
@@ -141,7 +167,14 @@ public class AnimationControllerScript : MonoBehaviour
         {
             CustomMode = true;
             selectPartBtn = false;
+            SelectedParts = null;
+            rotationSpeed = new Vector3(0, 20f, 0);
             CustomModeUI.transform.Find("CustomUI").transform.Find("PartsButton").gameObject.SetActive(false);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("LeftTurn").gameObject.SetActive(true);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("RightTurn").gameObject.SetActive(true);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("Pause").gameObject.SetActive(true);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("Play").gameObject.SetActive(false);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("FrontSide").gameObject.SetActive(false);
         }
         else
         {
@@ -295,18 +328,17 @@ public class AnimationControllerScript : MonoBehaviour
         float addLocationX = 0.5f,
         float addLocationY = 0.5f,
         float addLocationZ = 0.5f,
-        float addScaleX = 0.5f,
-        float addScaleY = 0.5f,
-        float addScaleZ = 0.5f
+        float addScale = 0.5f
         )
     {
         if (Object == null)
         {
-            Debug.LogError("Object가 설정되어 있지 않습니다.");
+            Debug.Log("Object가 설정되어 있지 않습니다.");
             return;
         }
         else
         {
+            if (Object == Body && loadedGlb != null) { Object = loadedGlb; }
             SelectedParts = Object;
             RefreshCustomMode();
 
@@ -319,9 +351,9 @@ public class AnimationControllerScript : MonoBehaviour
 
 
                 Object.transform.localScale = new Vector3(
-                    Object.transform.localScale.x + addScaleX,
-                    Object.transform.localScale.y + addScaleY,
-                    Object.transform.localScale.z + addScaleZ);
+                    Object.transform.localScale.x + addScale,
+                    Object.transform.localScale.y + addScale,
+                    Object.transform.localScale.z + addScale);
             }
             else
             {
@@ -415,15 +447,29 @@ public class AnimationControllerScript : MonoBehaviour
 
     private void RefreshCustomMode()
     {
+        CustomModeUI.transform.Find("CustomUI").transform.Find("ImportBody").gameObject.SetActive(ImportBody);
+        CustomModeUI.transform.Find("CustomUI").transform.Find("PartsChange").gameObject.SetActive(!ImportBody);
         CustomModeUI.transform.Find("CustomUI").gameObject.SetActive(CustomMode);
+        string name = "";
         if (SelectedParts != null)
         {
-            CustomModeUI.transform.Find("CustomUI").transform.Find("CustomModeTEXT").transform.Find("SelectedPartsName").GetComponent<TMP_Text>().text = SelectedParts.name;
+            CustomModeUI.transform.Find("CustomUI").transform.Find("ColorChange").gameObject.SetActive(true);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").gameObject.SetActive(true);
+            if (SelectedParts == Body) { name = "몸 (" + SelectedParts.name + ")"; }
+            if (SelectedParts == Legs) { name = "다리 (" + SelectedParts.name + ")"; }
+            if (SelectedParts == Arms) { name = "팔 (" + SelectedParts.name + ")"; }
+            if (SelectedParts == Eyes) { name = "눈 (" + SelectedParts.name + ")"; }
+            if (SelectedParts == Mouth) { name = "입 (" + SelectedParts.name + ")"; }
+            if (SelectedParts == Body && loadedGlb == null) { CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").gameObject.SetActive(false); }
         }
         else
         {
-            CustomModeUI.transform.Find("CustomUI").transform.Find("CustomModeTEXT").transform.Find("SelectedPartsName").GetComponent<TMP_Text>().text = "없음";
+            CustomModeUI.transform.Find("CustomUI").transform.Find("ColorChange").gameObject.SetActive(false);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("PartsChange").gameObject.SetActive(false);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").gameObject.SetActive(false);
+            name = "없음";
         }
+        CustomModeUI.transform.Find("CustomUI").transform.Find("CustomModeTEXT").transform.Find("SelectedPartsName").GetComponent<TMP_Text>().text = name;
     }
 
     public void OpenFileExplorer()
@@ -486,6 +532,7 @@ public class AnimationControllerScript : MonoBehaviour
                     newChild.name = "MyLoadedGLB";
                     loadedGlb = newChild;
                 }
+                RefreshCustomMode();
             }
             else
             {
