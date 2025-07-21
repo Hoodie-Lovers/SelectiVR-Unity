@@ -2679,7 +2679,7 @@ MonoBehaviour:
   m_text: "\uC5C6\uC74C\n"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 4d592223f68a36146ac0beb1eab94eb4, type: 2}
-  m_sharedMaterial: {fileID: 32402155595594738, guid: 4d592223f68a36146ac0beb1eab94eb4, type: 2}
+  m_sharedMaterial: {fileID: -5523732469350061383, guid: 4d592223f68a36146ac0beb1eab94eb4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -4445,7 +4445,7 @@ MonoBehaviour:
   m_text: "\uD604\uC7AC \uC120\uD0DD \uD30C\uCE20"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 4d592223f68a36146ac0beb1eab94eb4, type: 2}
-  m_sharedMaterial: {fileID: 32402155595594738, guid: 4d592223f68a36146ac0beb1eab94eb4, type: 2}
+  m_sharedMaterial: {fileID: -5523732469350061383, guid: 4d592223f68a36146ac0beb1eab94eb4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
