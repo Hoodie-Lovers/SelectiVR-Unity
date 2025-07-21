@@ -17,7 +17,8 @@ using Button = UnityEngine.UI.Button;
 public class AnimationControllerScript : MonoBehaviour
 {
     private Keyboard keyboard;
-    private bool CustomMode = true; //현재 커스텀 모드가 켜져있는지 확인하는 상태
+    private bool CustomMode = false; //현재 커스텀 모드가 켜져있는지 확인하는 상태
+    private bool ImportBody = false;
 
 
     public Transform parentTransform;
@@ -28,25 +29,43 @@ public class AnimationControllerScript : MonoBehaviour
     public GameObject Arms;
     public GameObject Eyes;
     public GameObject Mouth;
+    private int[] PartsNum = new int[5]; //Body,Legs,Arms,Eyes,Mouth
+    private int[] PartsColor = new int[5];
+    private GameObject loadedGlb; //Real Body
+
 
     public Canvas CustomModeUI;
     private GameObject SelectedParts;
     private bool selectPartBtn;
 
-    public Vector3 rotationSpeed = new Vector3(0, 10f, 0);
+    public Vector3 rotationSpeed = new Vector3(0, 20.0f, 0);
 
     void Start()
     {
         keyboard = Keyboard.current;
         RefreshCustomMode();
-        CustomModeUI.transform.Find("ImportBody").GetComponent<Button>().onClick.AddListener(()=> OpenFileExplorer()); //파일 불러오기 예시
-        CustomModeUI.transform.Find("LeftTurn").GetComponent<Button>().onClick.AddListener(() => rotationSpeed = new Vector3(0, 10f, 0));
-        CustomModeUI.transform.Find("RightTurn").GetComponent<Button>().onClick.AddListener(() => rotationSpeed = new Vector3(0, -10f, 0));
-        CustomModeUI.transform.Find("SelectParts").GetComponent<Button>().onClick.AddListener(() => SelectPartVisible());
-        CustomModeUI.transform.Find("Body").GetComponent<Button>().onClick.AddListener(() => SelectPartVisible());
-        CustomModeUI.transform.Find("SelectParts").GetComponent<Button>().onClick.AddListener(() => SelectPartVisible());
-        CustomModeUI.transform.Find("SelectParts").GetComponent<Button>().onClick.AddListener(() => SelectPartVisible());
-        CustomModeUI.transform.Find("SelectParts").GetComponent<Button>().onClick.AddListener(() => SelectPartVisible());
+        CustomModeUI.transform.Find("CustomBtn").GetComponent<Button>().onClick.AddListener(() => CustomOnOff());
+        CustomModeUI.transform.Find("QuitBtn").GetComponent<Button>().onClick.AddListener(() => Application.Quit()); //종료 버튼 (실행파일에서만 가능)
+        CustomModeUI.transform.Find("CustomUI").transform.Find("ImportBody").GetComponent<Button>().onClick.AddListener(() => OpenFileExplorer()); //파일 불러오기 예시
+        CustomModeUI.transform.Find("CustomUI").transform.Find("LeftTurn").GetComponent<Button>().onClick.AddListener(() => rotationSpeed = new Vector3(0, 20.0f, 0));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("RightTurn").GetComponent<Button>().onClick.AddListener(() => rotationSpeed = new Vector3(0, -20f, 0));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("Pause").GetComponent<Button>().onClick.AddListener(() => Play(false));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("Play").GetComponent<Button>().onClick.AddListener(() => Play(true));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("FrontSide").GetComponent<Button>().onClick.AddListener(() => transform.localRotation = Quaternion.identity);
+        CustomModeUI.transform.Find("CustomUI").transform.Find("SelectParts").GetComponent<Button>().onClick.AddListener(() => SelectPartVisible());
+        CustomModeUI.transform.Find("CustomUI").transform.Find("PartsButton").transform.Find("EyeParts").GetComponent<Button>().onClick.AddListener(() => Selecting(ref Eyes));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("PartsButton").transform.Find("MouthParts").GetComponent<Button>().onClick.AddListener(() => Selecting(ref Mouth));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("PartsButton").transform.Find("ArmParts").GetComponent<Button>().onClick.AddListener(() => Selecting(ref Arms));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("PartsButton").transform.Find("LegParts").GetComponent<Button>().onClick.AddListener(() => Selecting(ref Legs));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("PartsButton").transform.Find("BodyParts").GetComponent<Button>().onClick.AddListener(() => Selecting(ref Body));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("ColorChange").GetComponent<Button>().onClick.AddListener(() => CustomMaterial(ref SelectedParts));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("PartsChange").GetComponent<Button>().onClick.AddListener(() => PartChanging(ref SelectedParts));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").transform.Find("UpScale").GetComponent<Button>().onClick.AddListener(() => CustomParts(ref SelectedParts, 0, 0, 0, 0.5f));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").transform.Find("DownScale").GetComponent<Button>().onClick.AddListener(() => CustomParts(ref SelectedParts, 0, 0, 0, -0.5f));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").transform.Find("ToUp").GetComponent<Button>().onClick.AddListener(() => CustomParts(ref SelectedParts, 0, 0.5f, 0, 0));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").transform.Find("ToDown").GetComponent<Button>().onClick.AddListener(() => CustomParts(ref SelectedParts, 0, -0.5f, 0, 0));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").transform.Find("ToFront").GetComponent<Button>().onClick.AddListener(() => CustomParts(ref SelectedParts, 0, 0, -0.5f, 0));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").transform.Find("ToBack").GetComponent<Button>().onClick.AddListener(() => CustomParts(ref SelectedParts, 0, 0, 0.5f, 0));
     }
 
 
@@ -57,53 +76,12 @@ public class AnimationControllerScript : MonoBehaviour
             transform.Rotate(rotationSpeed * Time.deltaTime);
         }
 
-
         if (keyboard.spaceKey.wasPressedThisFrame) //모션 변화 함수 예시
         {
             ChangingMotion(Legs, "Walk");
             ChangingMotion(Arms, "Walk");
             ChangingMotion(Body, "YES");
         }
-
-        if (keyboard.cKey.wasPressedThisFrame) //커스텀 모드를 키고 끄는 예시
-        {
-            if (!CustomMode)
-            {
-                CustomMode = true;
-                selectPartBtn = false;
-                CustomModeUI.transform.Find("PartsButton").gameObject.SetActive(false);
-            }
-            else
-            {
-                CustomMode = false;
-                transform.rotation = Quaternion.identity;
-            }
-            RefreshCustomMode();
-        }
-
-        if (keyboard.xKey.wasPressedThisFrame)//커스텀 함수 예시
-        {
-            if (CustomMode)
-            {
-                CustomMaterial(ref Arms, "Red");
-            }
-        }
-
-        if (keyboard.zKey.wasPressedThisFrame)//커스텀 함수 예시
-        {
-            if (CustomMode)
-            {
-                CustomParts(ref Legs, 0, 0, 0, -0.2f, -0.2f, -0.2f);
-            }
-        }
-
-        if (keyboard.qKey.wasPressedThisFrame) //파츠 변화 함수 예시
-        {
-            ChangeParts(ref Arms, "ArmParts2", new Vector3(0, 0, 0), new Vector3(0, 180, 0), new Vector3(0.5f, 0.5f, 0.5f));
-
-            ChangeParts(ref Legs, "LegParts2", new Vector3(0, -1, 0), new Vector3(0, -90, 0), new Vector3(0.3f, 0.3f, 0.3f));
-        }
-
 
         if (keyboard.dKey.wasPressedThisFrame) //말하기 예시
         {
@@ -113,11 +91,26 @@ public class AnimationControllerScript : MonoBehaviour
         {
             ControlTalking(false);
         }
-
-        if (keyboard.sKey.wasPressedThisFrame)
+    }
+    private void Play(bool play)
+    {
+        if (play)
         {
-            Selecting(ref Mouth);
-            ChangeParts(ref SelectedParts, "Lips");
+            CustomModeUI.transform.Find("CustomUI").transform.Find("LeftTurn").gameObject.SetActive(true);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("RightTurn").gameObject.SetActive(true);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("Pause").gameObject.SetActive(true);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("Play").gameObject.SetActive(false);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("FrontSide").gameObject.SetActive(false);
+            rotationSpeed = new Vector3(0, 20.0f, 0);
+        }
+        else
+        {
+            CustomModeUI.transform.Find("CustomUI").transform.Find("LeftTurn").gameObject.SetActive(false);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("RightTurn").gameObject.SetActive(false);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("Pause").gameObject.SetActive(false);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("Play").gameObject.SetActive(true);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("FrontSide").gameObject.SetActive(true);
+            rotationSpeed = new Vector3(0, 0, 0);
         }
     }
 
@@ -129,6 +122,9 @@ public class AnimationControllerScript : MonoBehaviour
     public void Selecting(ref GameObject Object)
     {
         SelectedParts = Object;
+        if (Object == Body) { ImportBody = true; }
+        else { ImportBody = false; }
+        RefreshCustomMode();
     }
 
     public void SelectPartVisible()
@@ -136,14 +132,14 @@ public class AnimationControllerScript : MonoBehaviour
         if (selectPartBtn)
         {
             selectPartBtn = false;
-            CustomModeUI.transform.Find("PartsButton").gameObject.SetActive(false);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("PartsButton").gameObject.SetActive(false);
         }
         else
         {
             selectPartBtn = true;
-            CustomModeUI.transform.Find("PartsButton").gameObject.SetActive(true);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("PartsButton").gameObject.SetActive(true);
         }
-        
+
     }
 
 
@@ -167,6 +163,114 @@ public class AnimationControllerScript : MonoBehaviour
         }
         return false;
     }
+
+
+    public void CustomOnOff()
+    {
+        if (!CustomMode)
+        {
+            CustomMode = true;
+            selectPartBtn = false;
+            SelectedParts = null;
+            rotationSpeed = new Vector3(0, 20f, 0);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("PartsButton").gameObject.SetActive(false);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("LeftTurn").gameObject.SetActive(true);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("RightTurn").gameObject.SetActive(true);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("Pause").gameObject.SetActive(true);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("Play").gameObject.SetActive(false);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("FrontSide").gameObject.SetActive(false);
+        }
+        else
+        {
+            CustomMode = false;
+            transform.rotation = Quaternion.identity;
+        }
+        RefreshCustomMode();
+    }
+
+    public void PartChanging(ref GameObject Object)
+    {
+        if (Object != null)
+        {
+            if (Object == Body)
+            {
+                PartsColor[0] = 0;
+
+            }
+
+
+            if (Object == Legs)
+            {
+                PartsColor[1] = 0;
+                switch (PartsNum[1])
+                {
+                    case 0:
+                        PartsNum[1] = 1;
+                        ChangeParts(ref Legs, "LegParts2", new Vector3(0, -1, 0), new Vector3(0, -90, 0), new Vector3(0.3f, 0.3f, 0.3f));
+                        Selecting(ref Legs);
+                        break;
+                    default:
+                        PartsNum[1] = 0;
+                        ChangeParts(ref Legs, "LegParts", new Vector3(0, -3, 0), new Vector3(0, 90, 0), new Vector3(1.0f, 1.0f, 1.0f));
+                        Selecting(ref Legs);
+                        break;
+                }
+            }
+
+            if (Object == Arms)
+            {
+                PartsColor[2] = 0;
+                switch (PartsNum[2])
+                {
+                    case 0:
+                        PartsNum[2] = 1;
+                        ChangeParts(ref Arms, "ArmParts2", new Vector3(0, 0, 0), new Vector3(0, 180, 0), new Vector3(0.5f, 0.5f, 0.5f));
+                        Selecting(ref Arms);
+                        break;
+                    default:
+                        PartsNum[2] = 0;
+                        ChangeParts(ref Arms, "ArmParts", new Vector3(0, 0, 0), new Vector3(0, 90, 0), new Vector3(0.3f, 0.3f, 0.3f));
+                        Selecting(ref Arms);
+                        break;
+                }
+            }
+
+            if (Object == Eyes)
+            {
+                PartsColor[3] = 0;
+                switch (PartsNum[3])
+                {
+                    case 0:
+                        PartsNum[3] = 1;
+                        ChangeParts(ref Eyes, "EyeParts2", new Vector3(0, 0, -1), new Vector3(0, 90, 0), new Vector3(1.0f, 1.0f, 1.0f));
+                        Selecting(ref Eyes);
+                        break;
+                    default:
+                        PartsNum[3] = 0;
+                        ChangeParts(ref Eyes, "EyeParts", new Vector3(0, 0, -1), new Vector3(-90, 0, -90), new Vector3(40.0f, 40.0f, 40.0f));
+                        Selecting(ref Eyes);
+                        break;
+                }
+            }
+
+            if (Object == Mouth)
+            {
+                PartsColor[4] = 0;
+                switch (PartsNum[4])
+                {
+                    case 0:
+                        PartsNum[4] = 1;
+                        ChangeParts(ref SelectedParts, "Lips");
+                        break;
+                    default:
+                        PartsNum[4] = 0;
+                        ChangeParts(ref SelectedParts, "Mouth");
+                        break;
+                }
+            }
+        }
+    }
+
 
 
     public void ChangeParts(
@@ -196,7 +300,14 @@ public class AnimationControllerScript : MonoBehaviour
                 GameObject _newObject = Resources.Load<GameObject>(ObjectPath);
                 if (_newObject != null)
                 {
-                    oldObject = Instantiate(_newObject, MainTransform);
+                    if (oldObject == Eyes)
+                    {
+                        oldObject = Instantiate(_newObject, Body.transform);
+                    }
+                    else
+                    {
+                        oldObject = Instantiate(_newObject, MainTransform);
+                    }
                     oldObject.transform.localPosition = PrePosition;
                     oldObject.transform.localRotation = Quaternion.Euler(PreRotation);
                     oldObject.transform.localScale = PreScale;
@@ -210,7 +321,7 @@ public class AnimationControllerScript : MonoBehaviour
                     Debug.Log("프리팹 생성");
                 }
             }
-           
+
         }
     }
 
@@ -221,18 +332,17 @@ public class AnimationControllerScript : MonoBehaviour
         float addLocationX = 0.5f,
         float addLocationY = 0.5f,
         float addLocationZ = 0.5f,
-        float addScaleX = 0.5f,
-        float addScaleY = 0.5f,
-        float addScaleZ = 0.5f
+        float addScale = 0.5f
         )
     {
         if (Object == null)
         {
-            Debug.LogError("Object가 설정되어 있지 않습니다.");
+            Debug.Log("Object가 설정되어 있지 않습니다.");
             return;
         }
         else
         {
+            if (Object == Body && loadedGlb != null) { Object = loadedGlb; }
             SelectedParts = Object;
             RefreshCustomMode();
 
@@ -245,9 +355,9 @@ public class AnimationControllerScript : MonoBehaviour
 
 
                 Object.transform.localScale = new Vector3(
-                    Object.transform.localScale.x + addScaleX,
-                    Object.transform.localScale.y + addScaleY,
-                    Object.transform.localScale.z + addScaleZ);
+                    Object.transform.localScale.x + addScale,
+                    Object.transform.localScale.y + addScale,
+                    Object.transform.localScale.z + addScale);
             }
             else
             {
@@ -258,8 +368,65 @@ public class AnimationControllerScript : MonoBehaviour
     }
 
 
-    public void CustomMaterial(ref GameObject Object, String color)
+    public void CustomMaterial(ref GameObject Object)
     {
+        string color = "White";
+        int numP = 0;
+
+        if (Object == Body)
+        {
+            if (loadedGlb != null)
+            {
+                Object = loadedGlb;
+                numP = 0;
+            }
+            else
+            {
+                Debug.Log("No body");
+                return;
+            }
+        }
+        if (Object == Legs) { numP = 1; }
+        if (Object == Arms) { numP = 2; }
+        if (Object == Eyes) { numP = 3; }
+        if (Object == Mouth) { numP = 4; }
+
+        switch (PartsColor[numP])
+        {
+            case 0:
+                color = "Red";
+                break;
+
+            case 1:
+                color = "Orange";
+                break;
+
+            case 2:
+                color = "Yellow";
+                break;
+            case 3:
+                color = "Green";
+                break;
+            case 4:
+                color = "Blue";
+                break;
+            case 5:
+                color = "Purple";
+                break;
+            case 6:
+                color = "Brown";
+                break;
+            case 7:
+                color = "Black";
+                break;
+
+            default:
+                color = "White";
+                PartsColor[numP] = -1;
+                break;
+        }
+        PartsColor[numP] += 1;
+
         UnityEngine.Material loadedMat = Resources.Load<UnityEngine.Material>("Material/M_" + color);
         if (loadedMat != null)
         {
@@ -277,21 +444,36 @@ public class AnimationControllerScript : MonoBehaviour
 
 
             Debug.Log("머터리얼 변경완료");
+
         }
     }
 
 
     private void RefreshCustomMode()
     {
-        CustomModeUI.gameObject.SetActive(CustomMode);
+        CustomModeUI.transform.Find("CustomUI").transform.Find("ImportBody").gameObject.SetActive(ImportBody);
+        CustomModeUI.transform.Find("CustomUI").transform.Find("PartsChange").gameObject.SetActive(!ImportBody);
+        CustomModeUI.transform.Find("CustomUI").gameObject.SetActive(CustomMode);
+        string name = "";
         if (SelectedParts != null)
         {
-            CustomModeUI.transform.Find("CustomModeTEXT").transform.Find("SelectedPartsName").GetComponent<TMP_Text>().text = SelectedParts.name;
+            CustomModeUI.transform.Find("CustomUI").transform.Find("ColorChange").gameObject.SetActive(true);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").gameObject.SetActive(true);
+            if (SelectedParts == Body) { name = "몸 (" + SelectedParts.name + ")"; }
+            if (SelectedParts == Legs) { name = "다리 (" + SelectedParts.name + ")"; }
+            if (SelectedParts == Arms) { name = "팔 (" + SelectedParts.name + ")"; }
+            if (SelectedParts == Eyes) { name = "눈 (" + SelectedParts.name + ")"; }
+            if (SelectedParts == Mouth) { name = "입 (" + SelectedParts.name + ")"; }
+            if (SelectedParts == Body && loadedGlb == null) { CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").gameObject.SetActive(false); }
         }
         else
         {
-            CustomModeUI.transform.Find("CustomModeTEXT").transform.Find("SelectedPartsName").GetComponent<TMP_Text>().text = "없음";
+            CustomModeUI.transform.Find("CustomUI").transform.Find("ColorChange").gameObject.SetActive(false);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("PartsChange").gameObject.SetActive(false);
+            CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").gameObject.SetActive(false);
+            name = "없음";
         }
+        CustomModeUI.transform.Find("CustomUI").transform.Find("CustomModeTEXT").transform.Find("SelectedPartsName").GetComponent<TMP_Text>().text = name;
     }
 
     public void OpenFileExplorer()
@@ -306,6 +488,11 @@ public class AnimationControllerScript : MonoBehaviour
         if (paths.Length > 0 && !string.IsNullOrEmpty(paths[0]))
         {
             Debug.Log("선택한 파일 경로: " + paths[0]);
+            if (loadedGlb != null)
+            {
+                Destroy(loadedGlb);
+                loadedGlb = null;
+            }
             LoadGLB(paths[0]);
         }
         else
@@ -330,6 +517,7 @@ public class AnimationControllerScript : MonoBehaviour
         {
             Debug.Log("GLB 파일 로드 성공, 인스턴스화 시작!");
 
+            int beforeChildCount = parentTransform.childCount;
             var instantiator = new GameObjectInstantiator(gltf, parentTransform);
 
             success = await gltf.InstantiateMainSceneAsync(instantiator, CancellationToken.None);
@@ -340,6 +528,15 @@ public class AnimationControllerScript : MonoBehaviour
                 parentTransform.localPosition = new Vector3(0, 0, 0);
                 parentTransform.localRotation = Quaternion.identity;
                 parentTransform.localScale = Vector3.one;
+
+                for (int i = beforeChildCount; i < parentTransform.childCount; i++)
+                {
+                    var newChild = parentTransform.GetChild(i).gameObject;
+
+                    newChild.name = "MyLoadedGLB";
+                    loadedGlb = newChild;
+                }
+                RefreshCustomMode();
             }
             else
             {
