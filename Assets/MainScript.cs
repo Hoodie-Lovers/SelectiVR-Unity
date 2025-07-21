@@ -5,10 +5,10 @@ using GLTFast;
 using GLTFast.Logging;
 using System.Threading;
 using TMPro;
-using System;
 using UnityEngine.Networking;
 using System.IO;
 using Button = UnityEngine.UI.Button;
+using Unity.VisualScripting;
 
 public class AnimationControllerScript : MonoBehaviour
 {
@@ -25,7 +25,7 @@ public class AnimationControllerScript : MonoBehaviour
     public GameObject Arms;
     public GameObject Eyes;
     public GameObject Mouth;
-    private int[] PartsNum = new int[5]; //Body,Legs,Arms,Eyes,Mouth
+    private int[] PartsNum = { 1, 1, 1, 1, 1 }; //Body,Legs,Arms,Eyes,Mouth
     private int[] PartsColor = new int[5];
     private GameObject loadedGlb; //Real Body
 
@@ -38,6 +38,32 @@ public class AnimationControllerScript : MonoBehaviour
 
     void Start()
     {
+        CustomModeUI.renderMode = RenderMode.WorldSpace;
+        CustomModeUI.worldCamera = Camera.main;
+
+        float distanceFromCamera = 1.0f; // UI가 카메라에서 1m 앞에 있을 때
+
+        // 1. 카메라 FOV와 Aspect 비율로 시야 크기 계산
+        Camera cam = Camera.main;
+        float verticalFOV = cam.fieldOfView; // 보통 60도
+        float aspect = cam.aspect;
+
+        // 2. FOV 기반으로 높이/너비 계산
+        float height = 2.0f * distanceFromCamera * Mathf.Tan(verticalFOV * 0.5f * Mathf.Deg2Rad);
+        float width = height * aspect;
+
+        // 3. Canvas 위치와 크기 설정
+        RectTransform rect = CustomModeUI.GetComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(width, height); // 크기 설정 (단위: 미터)
+
+        CustomModeUI.transform.position = cam.transform.position + cam.transform.forward * distanceFromCamera;
+        CustomModeUI.transform.rotation = Quaternion.LookRotation(CustomModeUI.transform.position - cam.transform.position);
+
+        // 4. 스케일은 1로 (이미 크기 자체를 조정했기 때문)
+        CustomModeUI.transform.localScale = Vector3.one;
+
+
+
         keyboard = Keyboard.current;
         RefreshCustomMode();
         CustomModeUI.transform.Find("CustomBtn").GetComponent<Button>().onClick.AddListener(() => CustomOnOff());
@@ -62,7 +88,10 @@ public class AnimationControllerScript : MonoBehaviour
         CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").transform.Find("ToDown").GetComponent<Button>().onClick.AddListener(() => CustomParts(ref SelectedParts, 0, -0.5f, 0, 0));
         CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").transform.Find("ToFront").GetComponent<Button>().onClick.AddListener(() => CustomParts(ref SelectedParts, 0, 0, -0.5f, 0));
         CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").transform.Find("ToBack").GetComponent<Button>().onClick.AddListener(() => CustomParts(ref SelectedParts, 0, 0, 0.5f, 0));
-    }
+        CustomModeUI.transform.Find("CustomUI").transform.Find("Rotation").transform.Find("Pitch").GetComponent<Button>().onClick.AddListener(() => loadedGlb.transform.Rotate(MainTransform.transform.right, 10f, Space.World));
+        CustomModeUI.transform.Find("CustomUI").transform.Find("Rotation").transform.Find("Yaw").GetComponent<Button>().onClick.AddListener(() => loadedGlb.transform.Rotate(MainTransform.transform.forward, 10f, Space.World));
+        //Camera.main.transform.foward 이런식으로 하면 카메라 기준이긴 한데.. 문제는 custom mode에서 캐릭터가 계속 회전중이라서 계속 회전 축의 방향이 캐릭터 회전에 따라 달라짐.
+    }   //드래그로 회전 구현시 드래그시에는 회전을 멈추던지 해야할 것 같음.
 
 
     void Update()
@@ -142,11 +171,14 @@ public class AnimationControllerScript : MonoBehaviour
     public void ChangingMotion(GameObject Object, string type)
     {
         Animator animator = Object.GetComponent<Animator>();
-        if (!HasParameter(animator, type, AnimatorControllerParameterType.Trigger))
+        if (animator != null)
         {
-            Debug.Log($"'{type}' is not Exist in '{Object.name}'");
+            if (!HasParameter(animator, type, AnimatorControllerParameterType.Trigger))
+            {
+                Debug.Log($"'{type}' is not Exist in '{Object.name}'");
+            }
+            animator.SetTrigger(type);
         }
-        animator.SetTrigger(type);
     }
     private static bool HasParameter(Animator animator, string paramName, AnimatorControllerParameterType type)
     {
@@ -179,6 +211,7 @@ public class AnimationControllerScript : MonoBehaviour
         else
         {
             CustomMode = false;
+            ImportBody = false;
             transform.rotation = Quaternion.identity;
         }
         RefreshCustomMode();
@@ -191,7 +224,6 @@ public class AnimationControllerScript : MonoBehaviour
             if (Object == Body)
             {
                 PartsColor[0] = 0;
-
             }
 
 
@@ -202,12 +234,17 @@ public class AnimationControllerScript : MonoBehaviour
                 {
                     case 0:
                         PartsNum[1] = 1;
+                        ChangeParts(ref Legs, "LegParts", new Vector3(0, -3, 0), new Vector3(0, 90, 0), new Vector3(1.0f, 1.0f, 1.0f));
+                        Selecting(ref Legs);
+                        break;
+                    case 1:
+                        PartsNum[1] = 2;
                         ChangeParts(ref Legs, "LegParts2", new Vector3(0, -1, 0), new Vector3(0, -90, 0), new Vector3(0.3f, 0.3f, 0.3f));
                         Selecting(ref Legs);
                         break;
                     default:
                         PartsNum[1] = 0;
-                        ChangeParts(ref Legs, "LegParts", new Vector3(0, -3, 0), new Vector3(0, 90, 0), new Vector3(1.0f, 1.0f, 1.0f));
+                        ChangeParts(ref Legs, "Parts", new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0));
                         Selecting(ref Legs);
                         break;
                 }
@@ -220,12 +257,17 @@ public class AnimationControllerScript : MonoBehaviour
                 {
                     case 0:
                         PartsNum[2] = 1;
+                        ChangeParts(ref Arms, "ArmParts", new Vector3(0, 0, 0), new Vector3(0, 90, 0), new Vector3(0.3f, 0.3f, 0.3f));
+                        Selecting(ref Arms);
+                        break;
+                    case 1:
+                        PartsNum[2] = 2;
                         ChangeParts(ref Arms, "ArmParts2", new Vector3(0, 0, 0), new Vector3(0, 180, 0), new Vector3(0.5f, 0.5f, 0.5f));
                         Selecting(ref Arms);
                         break;
                     default:
                         PartsNum[2] = 0;
-                        ChangeParts(ref Arms, "ArmParts", new Vector3(0, 0, 0), new Vector3(0, 90, 0), new Vector3(0.3f, 0.3f, 0.3f));
+                        ChangeParts(ref Arms, "Parts", new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0));
                         Selecting(ref Arms);
                         break;
                 }
@@ -238,12 +280,17 @@ public class AnimationControllerScript : MonoBehaviour
                 {
                     case 0:
                         PartsNum[3] = 1;
+                        ChangeParts(ref Eyes, "EyeParts", new Vector3(0, 0, -1), new Vector3(-90, 0, -90), new Vector3(40.0f, 40.0f, 40.0f));
+                        Selecting(ref Eyes);
+                        break;
+                    case 1:
+                        PartsNum[3] = 2;
                         ChangeParts(ref Eyes, "EyeParts2", new Vector3(0, 0, -1), new Vector3(0, 90, 0), new Vector3(1.0f, 1.0f, 1.0f));
                         Selecting(ref Eyes);
                         break;
                     default:
                         PartsNum[3] = 0;
-                        ChangeParts(ref Eyes, "EyeParts", new Vector3(0, 0, -1), new Vector3(-90, 0, -90), new Vector3(40.0f, 40.0f, 40.0f));
+                        ChangeParts(ref Eyes, "Parts", new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0));
                         Selecting(ref Eyes);
                         break;
                 }
@@ -256,11 +303,18 @@ public class AnimationControllerScript : MonoBehaviour
                 {
                     case 0:
                         PartsNum[4] = 1;
-                        ChangeParts(ref SelectedParts, "Lips");
+                        ChangeParts(ref Mouth, "Mouth");
+                        Selecting(ref Mouth);
+                        break;
+                    case 1:
+                        PartsNum[4] = 2;
+                        ChangeParts(ref Mouth, "Lips");
+                        Selecting(ref Mouth);
                         break;
                     default:
                         PartsNum[4] = 0;
-                        ChangeParts(ref SelectedParts, "Mouth");
+                        ChangeParts(ref Mouth, "Parts", new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0));
+                        Selecting(ref Mouth);
                         break;
                 }
             }
@@ -280,6 +334,8 @@ public class AnimationControllerScript : MonoBehaviour
         {
             if (oldObject == Mouth)
             {
+                Material spriteDefault = new Material(Shader.Find("Sprites/Default"));
+                Mouth.GetComponent<Renderer>().material = spriteDefault;
                 Mouth.GetComponent<MouthAnimator>().ChangeMouth(newObject);
             }
             else
@@ -450,17 +506,41 @@ public class AnimationControllerScript : MonoBehaviour
         CustomModeUI.transform.Find("CustomUI").transform.Find("ImportBody").gameObject.SetActive(ImportBody);
         CustomModeUI.transform.Find("CustomUI").transform.Find("PartsChange").gameObject.SetActive(!ImportBody);
         CustomModeUI.transform.Find("CustomUI").gameObject.SetActive(CustomMode);
+        CustomModeUI.transform.Find("CustomUI").transform.Find("Rotation").gameObject.SetActive(false);
         string name = "";
         if (SelectedParts != null)
         {
             CustomModeUI.transform.Find("CustomUI").transform.Find("ColorChange").gameObject.SetActive(true);
             CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").gameObject.SetActive(true);
-            if (SelectedParts == Body) { name = "몸 (" + SelectedParts.name + ")"; }
-            if (SelectedParts == Legs) { name = "다리 (" + SelectedParts.name + ")"; }
-            if (SelectedParts == Arms) { name = "팔 (" + SelectedParts.name + ")"; }
-            if (SelectedParts == Eyes) { name = "눈 (" + SelectedParts.name + ")"; }
-            if (SelectedParts == Mouth) { name = "입 (" + SelectedParts.name + ")"; }
-            if (SelectedParts == Body && loadedGlb == null) { CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").gameObject.SetActive(false); }
+            if (SelectedParts == Body)
+            {
+                name = "몸 (" + SelectedParts.name + ")";
+                CustomModeUI.transform.Find("CustomUI").transform.Find("Rotation").gameObject.SetActive(true);
+            }
+            if (SelectedParts == Legs) { name = "다리 (" + SelectedParts.name + ")"; if (PartsNum[1] == 0)
+                {
+                    CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").gameObject.SetActive(false);
+                } }
+            if (SelectedParts == Arms) { name = "팔 (" + SelectedParts.name + ")"; if (PartsNum[2] == 0)
+                {
+                    CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").gameObject.SetActive(false);
+                }
+            }
+            if (SelectedParts == Eyes) { name = "눈 (" + SelectedParts.name + ")"; if (PartsNum[3] == 0)
+                {
+                    CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").gameObject.SetActive(false);
+                }
+            }
+            if (SelectedParts == Mouth) { name = "입 (" + SelectedParts.name + ")"; if (PartsNum[4] == 0)
+                {
+                    CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").gameObject.SetActive(false);
+                }
+            }
+            if (SelectedParts == Body && loadedGlb == null)
+            {
+                CustomModeUI.transform.Find("CustomUI").transform.Find("Rotation").gameObject.SetActive(false);
+                CustomModeUI.transform.Find("CustomUI").transform.Find("PositionScale").gameObject.SetActive(false);
+            }
         }
         else
         {
@@ -567,5 +647,4 @@ public class AnimationControllerScript : MonoBehaviour
             LoadGLB(localPath);
         }
     }
-
 }
