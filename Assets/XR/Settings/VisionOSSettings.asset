@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: VisionOSSettings
   m_EditorClassIdentifier: 
   m_AppMode: 1
-  m_HandsTrackingUsageDescription: 
+  m_HandsTrackingUsageDescription: 'This app uses hand tracking to allow users to
+    interact with 3D objects using natural gestures. '
   m_WorldSensingUsageDescription: 
   m_RuntimeSettings: {fileID: 11400000, guid: ee1108cef4aa34d9bb5a0860acea361d, type: 2}
   m_UpperLimbVisibility: 0
