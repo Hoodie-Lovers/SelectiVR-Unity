@@ -38,31 +38,6 @@ public class AnimationControllerScript : MonoBehaviour
 
     void Start()
     {
-        CustomModeUI.renderMode = RenderMode.WorldSpace;
-        CustomModeUI.worldCamera = Camera.main;
-
-        float distanceFromCamera = 1.0f; // UI가 카메라에서 1m 앞에 있을 때
-
-        // 1. 카메라 FOV와 Aspect 비율로 시야 크기 계산
-        Camera cam = Camera.main;
-        float verticalFOV = cam.fieldOfView; // 보통 60도
-        float aspect = cam.aspect;
-
-        // 2. FOV 기반으로 높이/너비 계산
-        float height = 2.0f * distanceFromCamera * Mathf.Tan(verticalFOV * 0.5f * Mathf.Deg2Rad);
-        float width = height * aspect;
-
-        // 3. Canvas 위치와 크기 설정
-        RectTransform rect = CustomModeUI.GetComponent<RectTransform>();
-        rect.sizeDelta = new Vector2(width, height); // 크기 설정 (단위: 미터)
-
-        CustomModeUI.transform.position = cam.transform.position + cam.transform.forward * distanceFromCamera;
-        CustomModeUI.transform.rotation = Quaternion.LookRotation(CustomModeUI.transform.position - cam.transform.position);
-
-        // 4. 스케일은 1로 (이미 크기 자체를 조정했기 때문)
-        CustomModeUI.transform.localScale = Vector3.one;
-
-
 
         keyboard = Keyboard.current;
         RefreshCustomMode();
