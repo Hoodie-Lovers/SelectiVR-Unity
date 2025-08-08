@@ -373,12 +373,10 @@ public class AnimationControllerScript : MonoBehaviour
         }
         else
         {
-            if (Object == Body && loadedGlb != null) { Object = loadedGlb; }
-            SelectedParts = Object;
-            RefreshCustomMode();
-
             if (CustomMode)
             {
+                if (Object == Body && loadedGlb != null) { Object = loadedGlb; }
+
                 Object.transform.localPosition = new Vector3(
                     Object.transform.localPosition.x + addLocationX,
                     Object.transform.localPosition.y + addLocationY,
@@ -389,6 +387,10 @@ public class AnimationControllerScript : MonoBehaviour
                     Object.transform.localScale.x + addScale,
                     Object.transform.localScale.y + addScale,
                     Object.transform.localScale.z + addScale);
+
+                if (Object == loadedGlb) { Object = Body; }
+                SelectedParts = Object;
+                RefreshCustomMode();
             }
             else
             {
@@ -591,6 +593,7 @@ public class AnimationControllerScript : MonoBehaviour
                     newChild.name = "MyLoadedGLB";
                     loadedGlb = newChild;
                 }
+                Selecting(ref Body);
                 RefreshCustomMode();
             }
             else
